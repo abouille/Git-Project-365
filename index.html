@@ -1,204 +1,566 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Git-Project-365 – Pages HTML</title>
-<style>
-  :root { --accent:#0f5c6b; --accent-2:#2e8b57; --bg:#f4f7f8; --line:#dbe3e6; --text:#1f2d33; }
-  * { box-sizing:border-box; }
-  html, body { height:100%; margin:0; font-family:"Segoe UI", system-ui, sans-serif; color:var(--text); background:var(--bg); }
-  .app { display:flex; height:100%; }
-  nav { width:300px; min-width:240px; background:#fff; border-right:1px solid var(--line); display:flex; flex-direction:column; }
-  nav header { padding:16px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#fff; }
-  nav header h1 { margin:0; font-size:17px; }
-  nav header p { margin:4px 0 0; font-size:12px; opacity:.85; }
-  .search { padding:10px; border-bottom:1px solid var(--line); }
-  .search input { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:6px; font-size:14px; }
-  #menu { flex:1; overflow:auto; padding:8px 0; }
-  .group { padding:10px 16px 4px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#6b7c85; }
-  .item { display:block; padding:9px 16px; font-size:14px; color:var(--text); text-decoration:none; border-left:3px solid transparent; cursor:pointer; }
-  .item:hover { background:#eef4f5; }
-  .item.active { background:#e3f0f2; border-left-color:var(--accent); font-weight:600; color:var(--accent); }
-  .msg { padding:16px; font-size:13px; color:#6b7c85; line-height:1.5; }
-  .msg.err { color:#a4262c; }
-  nav footer { padding:8px 16px; font-size:11px; color:#8a99a1; border-top:1px solid var(--line); }
-  main { flex:1; display:flex; flex-direction:column; min-width:0; }
-  .bar { display:flex; align-items:center; gap:10px; padding:8px 14px; background:#fff; border-bottom:1px solid var(--line); font-size:14px; }
-  .bar .title { flex:1; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .bar a, .bar button { font:inherit; font-size:13px; padding:5px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--accent); cursor:pointer; text-decoration:none; }
-  .bar a:hover, .bar button:hover { background:#eef4f5; }
-  iframe { flex:1; width:100%; border:0; background:#fff; }
-  .welcome { flex:1; display:flex; align-items:center; justify-content:center; color:#6b7c85; font-size:15px; }
-  @media (max-width:700px){ nav{ width:200px; min-width:160px; } }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Git-Project-365 - Pages HTML</title>
+  <style>
+    :root {
+      --accent: #0b6b78;
+      --accent-strong: #07515c;
+      --accent-soft: #e6f4f5;
+      --secondary: #2f8f68;
+      --bg: #eef3f5;
+      --surface: #ffffff;
+      --surface-alt: #f7f9fa;
+      --line: #d8e1e5;
+      --text: #17262d;
+      --muted: #667982;
+      --danger: #b4232b;
+      --shadow: 0 12px 32px rgba(23, 38, 45, 0.10);
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    button,
+    input { font: inherit; }
+
+    /* Empêche les règles display:flex de neutraliser l'attribut hidden. */
+    [hidden] { display: none !important; }
+
+    .app {
+      display: flex;
+      width: 100%;
+      height: 100dvh;
+      min-height: 0;
+      padding: 0;
+    }
+
+    nav {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex: 0 0 300px;
+      min-width: 240px;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+      background: var(--surface);
+      border-right: 1px solid var(--line);
+      box-shadow: 8px 0 24px rgba(23, 38, 45, 0.05);
+    }
+
+    nav header {
+      padding: 22px 20px 20px;
+      color: #fff;
+      background:
+        radial-gradient(circle at 100% 0, rgba(255,255,255,.18), transparent 38%),
+        linear-gradient(135deg, var(--accent-strong), var(--secondary));
+    }
+
+    nav header h1 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+    }
+
+    nav header p {
+      margin: 7px 0 0;
+      font-size: 12px;
+      line-height: 1.45;
+      opacity: .86;
+    }
+
+    .search {
+      padding: 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .search input {
+      width: 100%;
+      height: 40px;
+      padding: 0 12px;
+      color: var(--text);
+      background: var(--surface-alt);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      outline: none;
+      transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+
+    .search input:hover { background: #fff; }
+
+    .search input:focus {
+      background: #fff;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(11, 107, 120, .13);
+    }
+
+    #menu {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 10px 8px;
+      scrollbar-width: thin;
+      scrollbar-color: #bdcbd1 transparent;
+    }
+
+    .group {
+      padding: 13px 10px 6px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .item {
+      display: block;
+      margin: 2px 0;
+      padding: 10px 12px;
+      overflow: hidden;
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.35;
+      text-decoration: none;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      border: 1px solid transparent;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: color .16s ease, background .16s ease, border-color .16s ease, transform .16s ease;
+    }
+
+    .item:hover {
+      color: var(--accent-strong);
+      background: var(--surface-alt);
+      border-color: var(--line);
+      transform: translateX(2px);
+    }
+
+    .item.active {
+      color: var(--accent-strong);
+      font-weight: 650;
+      background: var(--accent-soft);
+      border-color: #c6e5e8;
+    }
+
+    .msg {
+      padding: 18px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .msg.err { color: var(--danger); }
+
+    .msg code {
+      padding: 1px 5px;
+      font-size: .92em;
+      background: rgba(180, 35, 43, .08);
+      border-radius: 4px;
+    }
+
+    nav footer {
+      padding: 10px 16px;
+      color: #82939b;
+      font-size: 11px;
+      background: var(--surface-alt);
+      border-top: 1px solid var(--line);
+    }
+
+    main {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      background: var(--bg);
+    }
+
+    .bar {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: center;
+      gap: 8px;
+      min-height: 58px;
+      padding: 9px 14px;
+      background: rgba(255, 255, 255, .94);
+      border-bottom: 1px solid var(--line);
+      box-shadow: 0 4px 16px rgba(23, 38, 45, .05);
+      backdrop-filter: blur(10px);
+    }
+
+    .bar .title {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      font-size: 14px;
+      font-weight: 650;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bar a,
+    .bar button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      padding: 7px 11px;
+      color: var(--accent-strong);
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      cursor: pointer;
+      transition: background .16s ease, border-color .16s ease, transform .16s ease;
+    }
+
+    .bar a:hover,
+    .bar button:hover {
+      background: var(--accent-soft);
+      border-color: #b8dfe3;
+      transform: translateY(-1px);
+    }
+
+    iframe {
+      display: block;
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      background: #fff;
+      border: 0;
+    }
+
+    .welcome {
+      display: grid;
+      flex: 1;
+      min-height: 0;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .welcome-card {
+      width: min(520px, 100%);
+      padding: 34px;
+      text-align: center;
+      background: rgba(255, 255, 255, .86);
+      border: 1px solid rgba(216, 225, 229, .95);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .welcome-icon {
+      display: grid;
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 16px;
+      place-items: center;
+      font-size: 25px;
+      background: var(--accent-soft);
+      border-radius: 16px;
+    }
+
+    .welcome strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 18px;
+    }
+
+    .welcome span {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    @media (max-width: 760px) {
+      nav { flex-basis: 230px; min-width: 190px; }
+      nav header { padding: 18px 15px; }
+      .bar { min-height: 54px; padding: 8px 10px; }
+      .bar a, .bar button { padding: 7px 9px; }
+      .welcome-card { padding: 26px 20px; }
+    }
+
+    @media (max-width: 560px) {
+      .app { flex-direction: column; }
+
+      nav {
+        flex: 0 0 auto;
+        width: 100%;
+        min-width: 0;
+        max-height: 46dvh;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        box-shadow: 0 8px 24px rgba(23, 38, 45, .06);
+      }
+
+      nav header { padding: 14px 16px; }
+      nav header p { display: none; }
+      .search { padding: 10px; }
+      #menu { padding: 6px; }
+      nav footer { padding: 7px 12px; }
+      .bar .title { font-size: 13px; }
+      .bar a, .bar button { font-size: 0; }
+      .bar a::first-letter, .bar button::first-letter { font-size: 16px; }
+    }
+  </style>
 </head>
 <body>
-<div class="app">
-  <nav>
-    <header><h1>📚 Pages HTML</h1><p>Cliquez sur une page pour la lancer</p></header>
-    <div class="search"><input id="filter" type="search" placeholder="Rechercher une page…" autocomplete="off"></div>
-    <div id="menu"><div class="msg">Chargement…</div></div>
-    <footer id="count"></footer>
-  </nav>
-  <main>
-    <div class="bar" id="bar" hidden>
-      <span class="title" id="curTitle"></span>
-      <button id="reload" title="Recharger la page">↻ Recharger</button>
-      <a id="openTab" target="_blank" rel="noopener">↗ Nouvel onglet</a>
-    </div>
-    <div class="welcome" id="welcome">← Choisissez une page dans le menu</div>
-    <iframe id="frame" hidden title="Page sélectionnée"></iframe>
-  </main>
-</div>
+  <div class="app">
+    <nav aria-label="Pages HTML">
+      <header>
+        <h1><span aria-hidden="true">📚</span> Pages HTML</h1>
+        <p>Cliquez sur une page pour la lancer</p>
+      </header>
 
-<script>
-(function () {
-  'use strict';
-  var FOLDER = 'PageHTML';            // nom du dossier contenant les pages
-  var pages = [];                     // [{file:'a.html' | 'sous/a.html', title:'...'}]
+      <div class="search">
+        <input id="filter" type="search" placeholder="Rechercher une page…" autocomplete="off" aria-label="Rechercher une page">
+      </div>
 
-  var $menu = document.getElementById('menu');
-  var $filter = document.getElementById('filter');
-  var $frame = document.getElementById('frame');
-  var $bar = document.getElementById('bar');
-  var $welcome = document.getElementById('welcome');
-  var $curTitle = document.getElementById('curTitle');
-  var $openTab = document.getElementById('openTab');
-  var $count = document.getElementById('count');
+      <div id="menu"><div class="msg">Chargement…</div></div>
+      <footer id="count" aria-live="polite"></footer>
+    </nav>
 
-  function prettyName(file) {
-    var base = file.split('/').pop().replace(/\.html?$/i, '');
-    return base.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
-  }
-  function encodePath(p) { return p.split('/').map(encodeURIComponent).join('/'); }
-  function isHtml(n) { return /\.html?$/i.test(n) && !/^manifest/i.test(n); }
+    <main>
+      <div class="bar" id="bar" hidden>
+        <span class="title" id="curTitle"></span>
+        <button id="reload" type="button" title="Recharger la page">↻ Recharger</button>
+        <a id="openTab" target="_blank" rel="noopener" title="Ouvrir dans un nouvel onglet">↗ Nouvel onglet</a>
+      </div>
 
-  /* --- Source 1 : manifest.json (recommandé, fonctionne sur GitHub Pages) --- */
-  function fromManifest() {
-    return fetch(FOLDER + '/manifest.json', { cache: 'no-store' }).then(function (r) {
-      if (!r.ok) throw new Error('manifest absent');
-      return r.json();
-    }).then(function (j) {
-      var arr = Array.isArray(j) ? j : (j.pages || []);
-      return arr.map(function (x) {
-        return typeof x === 'string' ? { file: x, title: prettyName(x) }
-                                     : { file: x.file, title: x.title || prettyName(x.file) };
-      });
-    });
-  }
+      <div class="welcome" id="welcome">
+        <div class="welcome-card">
+          <div class="welcome-icon" aria-hidden="true">←</div>
+          <strong>Sélectionnez une page</strong>
+          <span>Choisissez un élément dans le menu pour l’afficher ici.</span>
+        </div>
+      </div>
 
-  /* --- Source 2 : API GitHub (dépôt public uniquement) --- */
-  function fromGitHubApi() {
-    var host = location.hostname;
-    if (!/\.github\.io$/i.test(host)) return Promise.reject(new Error('pas sur github.io'));
-    var owner = host.split('.')[0];
-    var repo = location.pathname.split('/')[1];
-    if (!repo) return Promise.reject(new Error('dépôt introuvable'));
-    return fetch('https://api.github.com/repos/' + owner + '/' + repo + '/git/trees/HEAD?recursive=1')
-      .then(function (r) { if (!r.ok) throw new Error('API GitHub ' + r.status); return r.json(); })
-      .then(function (j) {
-        return (j.tree || []).filter(function (t) {
-          return t.type === 'blob' && t.path.indexOf(FOLDER + '/') === 0 && isHtml(t.path);
-        }).map(function (t) {
-          var f = t.path.substring(FOLDER.length + 1);
-          return { file: f, title: prettyName(f) };
-        });
-      });
-  }
+      <iframe id="frame" hidden title="Page sélectionnée"></iframe>
+    </main>
+  </div>
 
-  /* --- Source 3 : listing de dossier (serveur local : Live Server, python -m http.server…) --- */
-  function fromDirectoryListing() {
-    return fetch(FOLDER + '/').then(function (r) {
-      if (!r.ok) throw new Error('listing indisponible');
-      return r.text();
-    }).then(function (html) {
-      var doc = new DOMParser().parseFromString(html, 'text/html');
-      var out = [];
-      doc.querySelectorAll('a[href]').forEach(function (a) {
-        var href = decodeURIComponent(a.getAttribute('href').split('?')[0]).replace(/^.*\//, '');
-        if (isHtml(href)) out.push({ file: href, title: prettyName(href) });
-      });
-      if (!out.length) throw new Error('aucun fichier');
-      return out;
-    });
-  }
+  <script>
+    (function () {
+      'use strict';
 
-  function load() {
-    return fromManifest()
-      .catch(fromGitHubApi)
-      .catch(fromDirectoryListing);
-  }
+      var FOLDER = 'PageHTML';
+      var pages = [];
+      var currentFile = null;
 
-  /* --- Affichage du menu --- */
-  function render() {
-    var q = $filter.value.trim().toLowerCase();
-    var list = pages.filter(function (p) {
-      return !q || p.title.toLowerCase().indexOf(q) > -1 || p.file.toLowerCase().indexOf(q) > -1;
-    });
-    $menu.innerHTML = '';
-    if (!list.length) {
-      var m = document.createElement('div'); m.className = 'msg';
-      m.textContent = pages.length ? 'Aucun résultat.' : 'Aucune page trouvée.';
-      $menu.appendChild(m);
-    }
-    var lastGroup = null;
-    list.forEach(function (p) {
-      var parts = p.file.split('/');
-      var group = parts.length > 1 ? parts.slice(0, -1).join(' / ') : '';
-      if (group !== lastGroup) {
-        if (group) { var g = document.createElement('div'); g.className = 'group'; g.textContent = group; $menu.appendChild(g); }
-        lastGroup = group;
+      var $menu = document.getElementById('menu');
+      var $filter = document.getElementById('filter');
+      var $frame = document.getElementById('frame');
+      var $bar = document.getElementById('bar');
+      var $welcome = document.getElementById('welcome');
+      var $curTitle = document.getElementById('curTitle');
+      var $openTab = document.getElementById('openTab');
+      var $count = document.getElementById('count');
+
+      function prettyName(file) {
+        var base = file.split('/').pop().replace(/\.html?$/i, '');
+        return base.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
       }
-      var a = document.createElement('a');
-      a.className = 'item'; a.textContent = p.title; a.title = p.file;
-      a.href = '#' + encodeURIComponent(p.file);
-      a.dataset.file = p.file;
-      if (p.file === currentFile) a.classList.add('active');
-      $menu.appendChild(a);
-    });
-    $count.textContent = pages.length + ' page' + (pages.length > 1 ? 's' : '');
-  }
 
-  /* --- Ouverture d'une page --- */
-  var currentFile = null;
-  function open(file) {
-    var p = pages.filter(function (x) { return x.file === file; })[0];
-    if (!p) return;
-    currentFile = file;
-    var url = FOLDER + '/' + encodePath(file);
-    $frame.src = url;
-    $frame.hidden = false; $bar.hidden = false; $welcome.hidden = true;
-    $curTitle.textContent = p.title;
-    $openTab.href = url;
-    document.title = p.title + ' – Git-Project-365';
-    document.querySelectorAll('.item').forEach(function (el) {
-      el.classList.toggle('active', el.dataset.file === file);
-    });
-  }
-  function openFromHash() {
-    var h = decodeURIComponent(location.hash.replace(/^#/, ''));
-    if (h) open(h);
-  }
+      function encodePath(path) {
+        return path.split('/').map(encodeURIComponent).join('/');
+      }
 
-  $filter.addEventListener('input', render);
-  document.getElementById('reload').addEventListener('click', function () {
-    if (currentFile) $frame.src = $frame.src;
-  });
-  window.addEventListener('hashchange', openFromHash);
+      function isHtml(name) {
+        return /\.html?$/i.test(name) && !/^manifest/i.test(name);
+      }
 
-  load().then(function (list) {
-    pages = list.sort(function (a, b) { return a.file.localeCompare(b.file, 'fr', { numeric: true }); });
-    render();
-    openFromHash();
-  }).catch(function () {
-    $menu.innerHTML = '';
-    var m = document.createElement('div'); m.className = 'msg err';
-    m.innerHTML = 'Impossible de lister les pages.<br>Générez <code>PageHTML/manifest.json</code> avec <code>generate-manifest.ps1</code>, ' +
-                  'et ouvrez la page via GitHub Pages ou un serveur local (pas en double-clic <code>file://</code>).';
-    $menu.appendChild(m);
-  });
-})();
-</script>
+      function normalizePages(list) {
+        return list.filter(function (page) {
+          return page && typeof page.file === 'string' && isHtml(page.file);
+        });
+      }
+
+      function fromManifest() {
+        return fetch(FOLDER + '/manifest.json', { cache: 'no-store' })
+          .then(function (response) {
+            if (!response.ok) throw new Error('manifest absent');
+            return response.json();
+          })
+          .then(function (json) {
+            var list = Array.isArray(json) ? json : (json.pages || []);
+            return normalizePages(list.map(function (item) {
+              return typeof item === 'string'
+                ? { file: item, title: prettyName(item) }
+                : { file: item.file, title: item.title || prettyName(item.file) };
+            }));
+          });
+      }
+
+      function fromGitHubApi() {
+        var host = location.hostname;
+        if (!/\.github\.io$/i.test(host)) return Promise.reject(new Error('pas sur github.io'));
+
+        var owner = host.split('.')[0];
+        var repo = location.pathname.split('/')[1];
+        if (!repo) return Promise.reject(new Error('dépôt introuvable'));
+
+        return fetch('https://api.github.com/repos/' + owner + '/' + repo + '/git/trees/HEAD?recursive=1')
+          .then(function (response) {
+            if (!response.ok) throw new Error('API GitHub ' + response.status);
+            return response.json();
+          })
+          .then(function (json) {
+            return (json.tree || [])
+              .filter(function (item) {
+                return item.type === 'blob' && item.path.indexOf(FOLDER + '/') === 0 && isHtml(item.path);
+              })
+              .map(function (item) {
+                var file = item.path.substring(FOLDER.length + 1);
+                return { file: file, title: prettyName(file) };
+              });
+          });
+      }
+
+      function fromDirectoryListing() {
+        return fetch(FOLDER + '/')
+          .then(function (response) {
+            if (!response.ok) throw new Error('listing indisponible');
+            return response.text();
+          })
+          .then(function (html) {
+            var documentListing = new DOMParser().parseFromString(html, 'text/html');
+            var output = [];
+
+            documentListing.querySelectorAll('a[href]').forEach(function (link) {
+              var href = decodeURIComponent(link.getAttribute('href').split('?')[0]).replace(/^.*\//, '');
+              if (isHtml(href)) output.push({ file: href, title: prettyName(href) });
+            });
+
+            if (!output.length) throw new Error('aucun fichier');
+            return output;
+          });
+      }
+
+      function load() {
+        return fromManifest()
+          .catch(fromGitHubApi)
+          .catch(fromDirectoryListing);
+      }
+
+      function render() {
+        var query = $filter.value.trim().toLowerCase();
+        var list = pages.filter(function (page) {
+          return !query ||
+            page.title.toLowerCase().indexOf(query) > -1 ||
+            page.file.toLowerCase().indexOf(query) > -1;
+        });
+
+        $menu.innerHTML = '';
+
+        if (!list.length) {
+          var message = document.createElement('div');
+          message.className = 'msg';
+          message.textContent = pages.length ? 'Aucun résultat.' : 'Aucune page trouvée.';
+          $menu.appendChild(message);
+        }
+
+        var lastGroup = null;
+
+        list.forEach(function (page) {
+          var parts = page.file.split('/');
+          var group = parts.length > 1 ? parts.slice(0, -1).join(' / ') : '';
+
+          if (group !== lastGroup) {
+            if (group) {
+              var groupTitle = document.createElement('div');
+              groupTitle.className = 'group';
+              groupTitle.textContent = group;
+              $menu.appendChild(groupTitle);
+            }
+            lastGroup = group;
+          }
+
+          var link = document.createElement('a');
+          link.className = 'item';
+          link.textContent = page.title;
+          link.title = page.file;
+          link.href = '#' + encodeURIComponent(page.file);
+          link.dataset.file = page.file;
+
+          if (page.file === currentFile) link.classList.add('active');
+          $menu.appendChild(link);
+        });
+
+        $count.textContent = pages.length + ' page' + (pages.length > 1 ? 's' : '');
+      }
+
+      function openPage(file) {
+        var page = pages.filter(function (item) { return item.file === file; })[0];
+        if (!page) return;
+
+        currentFile = file;
+        var url = FOLDER + '/' + encodePath(file);
+
+        $frame.src = url;
+        $frame.hidden = false;
+        $bar.hidden = false;
+        $welcome.hidden = true;
+        $curTitle.textContent = page.title;
+        $openTab.href = url;
+        document.title = page.title + ' - Git-Project-365';
+
+        document.querySelectorAll('.item').forEach(function (element) {
+          element.classList.toggle('active', element.dataset.file === file);
+        });
+      }
+
+      function openFromHash() {
+        var hash = decodeURIComponent(location.hash.replace(/^#/, ''));
+        if (hash) openPage(hash);
+      }
+
+      $filter.addEventListener('input', render);
+
+      document.getElementById('reload').addEventListener('click', function () {
+        if (currentFile) $frame.src = $frame.src;
+      });
+
+      window.addEventListener('hashchange', openFromHash);
+
+      load()
+        .then(function (list) {
+          pages = normalizePages(list).sort(function (a, b) {
+            return a.file.localeCompare(b.file, 'fr', { numeric: true });
+          });
+          render();
+          openFromHash();
+        })
+        .catch(function () {
+          $menu.innerHTML = '';
+          var message = document.createElement('div');
+          message.className = 'msg err';
+          message.innerHTML = 'Impossible de lister les pages.<br>Générez <code>PageHTML/manifest.json</code> avec <code>generate-manifest.ps1</code>, puis ouvrez la page via GitHub Pages ou un serveur local, et non en double-clic <code>file://</code>.';
+          $menu.appendChild(message);
+          $count.textContent = 'Chargement impossible';
+        });
+    })();
+  </script>
 </body>
 </html>
