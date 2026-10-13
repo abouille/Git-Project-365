@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Liste des prénoms</title>
+  <!-- SheetJS : bibliothèque de lecture des fichiers Excel dans le navigateur -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: Segoe UI, Arial, sans-serif; background: #f3f6f9; margin: 0; padding: 40px; color: #1f2d3d; }
+    .card { max-width: 520px; margin: 0 auto; background: #fff; padding: 28px 32px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+    h1 { font-size: 20px; margin-top: 0; }
+    ul { padding-left: 20px; }
+    li { padding: 4px 0; }
+    .info { color: #607080; font-size: 14px; }
+    .error { color: #b00020; font-size: 14px; }
+    #fallback { display: none; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Voici la liste des prénoms présents dans la base :</h1>
+    <div id="status" class="info">Chargement…</div>
+    <ul id="liste"></ul>
+
+    <!-- Secours si le fichier est ouvert en local (file://) -->
+    <div id="fallback">
+      <p class="info">Sélectionnez manuellement le fichier <b>bdd.xlsx</b> :</p>
+      <input type="file" id="fichier" accept=".xlsx">
+    </div>
+  </div>
+
+  <script>
+    const CHEMIN_XLSX = "BDD/bdd.xlsx";   // chemin relatif depuis index.html
+    const statusEl = document.getElementById("status");
+    const listeEl  = document.getElementById("liste");
+
+    // Lit la colonne A de la 1ère feuille et affiche chaque valeur non vide
+    function afficher(workbook) {
+      const feuille = workbook.Sheets[workbook.SheetNames[0]];
+      const lignes  = XLSX.utils.sheet_to_json(feuille, { header: 1 });
+      const prenoms = lignes
+        .map(l => l[0])
+        .filter(v => v !== undefined && String(v).trim() !== "")
+        .map(v => String(v).trim());
+
+      listeEl.innerHTML = "";
+      prenoms.forEach(p => {
+        const li = document.createElement("li");
+        li.textContent = p;
+        listeEl.appendChild(li);
+      });
+      statusEl.className = "info";
+      statusEl.textContent = prenoms.length + " prénom(s) trouvé(s).";
+    }
+
+    async function charger() {
+      try {
+        const rep = await fetch(CHEMIN_XLSX + "?t=" + Date.now(), { cache: "no-store" });
+        if (!rep.ok) throw new Error("HTTP " + rep.status);
+        const buffer = await rep.arrayBuffer();
+        afficher(XLSX.read(buffer, { type: "array" }));
+      } catch (e) {
+        statusEl.className = "error";
+        statusEl.textContent = "Impossible de lire " + CHEMIN_XLSX + " automatiquement (" + e.message + ").";
+        document.getElementById("fallback").style.display = "block";
+      }
+    }
+
+    document.getElementById("fichier").addEventListener("change", async (ev) => {
+      const f = ev.target.files[0];
+      if (!f) return;
+      afficher(XLSX.read(await f.arrayBuffer(), { type: "array" }));
+    });
+
+    charger();
+  </script>
+</body>
+</html>
