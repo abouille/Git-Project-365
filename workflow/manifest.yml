@@ -1,0 +1,22 @@
+name: Générer manifest.json
+on:
+  push:
+    paths:
+      - 'PageHTML/**'
+      - 'generate-manifest.ps1'
+permissions:
+  contents: write
+jobs:
+  manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Générer le manifest
+        shell: pwsh
+        run: ./generate-manifest.ps1
+      - name: Commit si modifié
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add PageHTML/manifest.json
+          git diff --cached --quiet || (git commit -m "MAJ manifest.json" && git push)
