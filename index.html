@@ -1,79 +1,204 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Liste des prénoms</title>
-  <!-- SheetJS : bibliothèque de lecture des fichiers Excel dans le navigateur -->
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-  <style>
-    body { font-family: Segoe UI, Arial, sans-serif; background: #f3f6f9; margin: 0; padding: 40px; color: #1f2d3d; }
-    .card { max-width: 520px; margin: 0 auto; background: #fff; padding: 28px 32px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
-    h1 { font-size: 20px; margin-top: 0; }
-    ul { padding-left: 20px; }
-    li { padding: 4px 0; }
-    .info { color: #607080; font-size: 14px; }
-    .error { color: #b00020; font-size: 14px; }
-    #fallback { display: none; margin-top: 16px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Git-Project-365 – Pages HTML</title>
+<style>
+  :root { --accent:#0f5c6b; --accent-2:#2e8b57; --bg:#f4f7f8; --line:#dbe3e6; --text:#1f2d33; }
+  * { box-sizing:border-box; }
+  html, body { height:100%; margin:0; font-family:"Segoe UI", system-ui, sans-serif; color:var(--text); background:var(--bg); }
+  .app { display:flex; height:100%; }
+  nav { width:300px; min-width:240px; background:#fff; border-right:1px solid var(--line); display:flex; flex-direction:column; }
+  nav header { padding:16px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#fff; }
+  nav header h1 { margin:0; font-size:17px; }
+  nav header p { margin:4px 0 0; font-size:12px; opacity:.85; }
+  .search { padding:10px; border-bottom:1px solid var(--line); }
+  .search input { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:6px; font-size:14px; }
+  #menu { flex:1; overflow:auto; padding:8px 0; }
+  .group { padding:10px 16px 4px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#6b7c85; }
+  .item { display:block; padding:9px 16px; font-size:14px; color:var(--text); text-decoration:none; border-left:3px solid transparent; cursor:pointer; }
+  .item:hover { background:#eef4f5; }
+  .item.active { background:#e3f0f2; border-left-color:var(--accent); font-weight:600; color:var(--accent); }
+  .msg { padding:16px; font-size:13px; color:#6b7c85; line-height:1.5; }
+  .msg.err { color:#a4262c; }
+  nav footer { padding:8px 16px; font-size:11px; color:#8a99a1; border-top:1px solid var(--line); }
+  main { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .bar { display:flex; align-items:center; gap:10px; padding:8px 14px; background:#fff; border-bottom:1px solid var(--line); font-size:14px; }
+  .bar .title { flex:1; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bar a, .bar button { font:inherit; font-size:13px; padding:5px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--accent); cursor:pointer; text-decoration:none; }
+  .bar a:hover, .bar button:hover { background:#eef4f5; }
+  iframe { flex:1; width:100%; border:0; background:#fff; }
+  .welcome { flex:1; display:flex; align-items:center; justify-content:center; color:#6b7c85; font-size:15px; }
+  @media (max-width:700px){ nav{ width:200px; min-width:160px; } }
+</style>
 </head>
 <body>
-  <div class="card">
-    <h1>Voici la liste des prénoms présents dans la base :</h1>
-    <div id="status" class="info">Chargement…</div>
-    <ul id="liste"></ul>
-
-    <!-- Secours si le fichier est ouvert en local (file://) -->
-    <div id="fallback">
-      <p class="info">Sélectionnez manuellement le fichier <b>bdd.xlsx</b> :</p>
-      <input type="file" id="fichier" accept=".xlsx">
+<div class="app">
+  <nav>
+    <header><h1>📚 Pages HTML</h1><p>Cliquez sur une page pour la lancer</p></header>
+    <div class="search"><input id="filter" type="search" placeholder="Rechercher une page…" autocomplete="off"></div>
+    <div id="menu"><div class="msg">Chargement…</div></div>
+    <footer id="count"></footer>
+  </nav>
+  <main>
+    <div class="bar" id="bar" hidden>
+      <span class="title" id="curTitle"></span>
+      <button id="reload" title="Recharger la page">↻ Recharger</button>
+      <a id="openTab" target="_blank" rel="noopener">↗ Nouvel onglet</a>
     </div>
-  </div>
+    <div class="welcome" id="welcome">← Choisissez une page dans le menu</div>
+    <iframe id="frame" hidden title="Page sélectionnée"></iframe>
+  </main>
+</div>
 
-  <script>
-    const CHEMIN_XLSX = "BDD/bdd.xlsx";   // chemin relatif depuis index.html
-    const statusEl = document.getElementById("status");
-    const listeEl  = document.getElementById("liste");
+<script>
+(function () {
+  'use strict';
+  var FOLDER = 'PageHTML';            // nom du dossier contenant les pages
+  var pages = [];                     // [{file:'a.html' | 'sous/a.html', title:'...'}]
 
-    // Lit la colonne A de la 1ère feuille et affiche chaque valeur non vide
-    function afficher(workbook) {
-      const feuille = workbook.Sheets[workbook.SheetNames[0]];
-      const lignes  = XLSX.utils.sheet_to_json(feuille, { header: 1 });
-      const prenoms = lignes
-        .map(l => l[0])
-        .filter(v => v !== undefined && String(v).trim() !== "")
-        .map(v => String(v).trim());
+  var $menu = document.getElementById('menu');
+  var $filter = document.getElementById('filter');
+  var $frame = document.getElementById('frame');
+  var $bar = document.getElementById('bar');
+  var $welcome = document.getElementById('welcome');
+  var $curTitle = document.getElementById('curTitle');
+  var $openTab = document.getElementById('openTab');
+  var $count = document.getElementById('count');
 
-      listeEl.innerHTML = "";
-      prenoms.forEach(p => {
-        const li = document.createElement("li");
-        li.textContent = p;
-        listeEl.appendChild(li);
+  function prettyName(file) {
+    var base = file.split('/').pop().replace(/\.html?$/i, '');
+    return base.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  function encodePath(p) { return p.split('/').map(encodeURIComponent).join('/'); }
+  function isHtml(n) { return /\.html?$/i.test(n) && !/^manifest/i.test(n); }
+
+  /* --- Source 1 : manifest.json (recommandé, fonctionne sur GitHub Pages) --- */
+  function fromManifest() {
+    return fetch(FOLDER + '/manifest.json', { cache: 'no-store' }).then(function (r) {
+      if (!r.ok) throw new Error('manifest absent');
+      return r.json();
+    }).then(function (j) {
+      var arr = Array.isArray(j) ? j : (j.pages || []);
+      return arr.map(function (x) {
+        return typeof x === 'string' ? { file: x, title: prettyName(x) }
+                                     : { file: x.file, title: x.title || prettyName(x.file) };
       });
-      statusEl.className = "info";
-      statusEl.textContent = prenoms.length + " prénom(s) trouvé(s).";
-    }
-
-    async function charger() {
-      try {
-        const rep = await fetch(CHEMIN_XLSX + "?t=" + Date.now(), { cache: "no-store" });
-        if (!rep.ok) throw new Error("HTTP " + rep.status);
-        const buffer = await rep.arrayBuffer();
-        afficher(XLSX.read(buffer, { type: "array" }));
-      } catch (e) {
-        statusEl.className = "error";
-        statusEl.textContent = "Impossible de lire " + CHEMIN_XLSX + " automatiquement (" + e.message + ").";
-        document.getElementById("fallback").style.display = "block";
-      }
-    }
-
-    document.getElementById("fichier").addEventListener("change", async (ev) => {
-      const f = ev.target.files[0];
-      if (!f) return;
-      afficher(XLSX.read(await f.arrayBuffer(), { type: "array" }));
     });
+  }
 
-    charger();
-  </script>
+  /* --- Source 2 : API GitHub (dépôt public uniquement) --- */
+  function fromGitHubApi() {
+    var host = location.hostname;
+    if (!/\.github\.io$/i.test(host)) return Promise.reject(new Error('pas sur github.io'));
+    var owner = host.split('.')[0];
+    var repo = location.pathname.split('/')[1];
+    if (!repo) return Promise.reject(new Error('dépôt introuvable'));
+    return fetch('https://api.github.com/repos/' + owner + '/' + repo + '/git/trees/HEAD?recursive=1')
+      .then(function (r) { if (!r.ok) throw new Error('API GitHub ' + r.status); return r.json(); })
+      .then(function (j) {
+        return (j.tree || []).filter(function (t) {
+          return t.type === 'blob' && t.path.indexOf(FOLDER + '/') === 0 && isHtml(t.path);
+        }).map(function (t) {
+          var f = t.path.substring(FOLDER.length + 1);
+          return { file: f, title: prettyName(f) };
+        });
+      });
+  }
+
+  /* --- Source 3 : listing de dossier (serveur local : Live Server, python -m http.server…) --- */
+  function fromDirectoryListing() {
+    return fetch(FOLDER + '/').then(function (r) {
+      if (!r.ok) throw new Error('listing indisponible');
+      return r.text();
+    }).then(function (html) {
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      var out = [];
+      doc.querySelectorAll('a[href]').forEach(function (a) {
+        var href = decodeURIComponent(a.getAttribute('href').split('?')[0]).replace(/^.*\//, '');
+        if (isHtml(href)) out.push({ file: href, title: prettyName(href) });
+      });
+      if (!out.length) throw new Error('aucun fichier');
+      return out;
+    });
+  }
+
+  function load() {
+    return fromManifest()
+      .catch(fromGitHubApi)
+      .catch(fromDirectoryListing);
+  }
+
+  /* --- Affichage du menu --- */
+  function render() {
+    var q = $filter.value.trim().toLowerCase();
+    var list = pages.filter(function (p) {
+      return !q || p.title.toLowerCase().indexOf(q) > -1 || p.file.toLowerCase().indexOf(q) > -1;
+    });
+    $menu.innerHTML = '';
+    if (!list.length) {
+      var m = document.createElement('div'); m.className = 'msg';
+      m.textContent = pages.length ? 'Aucun résultat.' : 'Aucune page trouvée.';
+      $menu.appendChild(m);
+    }
+    var lastGroup = null;
+    list.forEach(function (p) {
+      var parts = p.file.split('/');
+      var group = parts.length > 1 ? parts.slice(0, -1).join(' / ') : '';
+      if (group !== lastGroup) {
+        if (group) { var g = document.createElement('div'); g.className = 'group'; g.textContent = group; $menu.appendChild(g); }
+        lastGroup = group;
+      }
+      var a = document.createElement('a');
+      a.className = 'item'; a.textContent = p.title; a.title = p.file;
+      a.href = '#' + encodeURIComponent(p.file);
+      a.dataset.file = p.file;
+      if (p.file === currentFile) a.classList.add('active');
+      $menu.appendChild(a);
+    });
+    $count.textContent = pages.length + ' page' + (pages.length > 1 ? 's' : '');
+  }
+
+  /* --- Ouverture d'une page --- */
+  var currentFile = null;
+  function open(file) {
+    var p = pages.filter(function (x) { return x.file === file; })[0];
+    if (!p) return;
+    currentFile = file;
+    var url = FOLDER + '/' + encodePath(file);
+    $frame.src = url;
+    $frame.hidden = false; $bar.hidden = false; $welcome.hidden = true;
+    $curTitle.textContent = p.title;
+    $openTab.href = url;
+    document.title = p.title + ' – Git-Project-365';
+    document.querySelectorAll('.item').forEach(function (el) {
+      el.classList.toggle('active', el.dataset.file === file);
+    });
+  }
+  function openFromHash() {
+    var h = decodeURIComponent(location.hash.replace(/^#/, ''));
+    if (h) open(h);
+  }
+
+  $filter.addEventListener('input', render);
+  document.getElementById('reload').addEventListener('click', function () {
+    if (currentFile) $frame.src = $frame.src;
+  });
+  window.addEventListener('hashchange', openFromHash);
+
+  load().then(function (list) {
+    pages = list.sort(function (a, b) { return a.file.localeCompare(b.file, 'fr', { numeric: true }); });
+    render();
+    openFromHash();
+  }).catch(function () {
+    $menu.innerHTML = '';
+    var m = document.createElement('div'); m.className = 'msg err';
+    m.innerHTML = 'Impossible de lister les pages.<br>Générez <code>PageHTML/manifest.json</code> avec <code>generate-manifest.ps1</code>, ' +
+                  'et ouvrez la page via GitHub Pages ou un serveur local (pas en double-clic <code>file://</code>).';
+    $menu.appendChild(m);
+  });
+})();
+</script>
 </body>
 </html>
