@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analyseur d'Historique de Versions SharePoint</title>
+  <!-- Libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); min-height:100vh; padding:20px; }
+    .container { max-width:1400px; margin:0 auto; background:#fff; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,.3); overflow:hidden; }
+    .header { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:#fff; padding:30px; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; }
+    .header h1 { font-size:2em; margin-bottom:10px; }
+    .header p { opacity:.9; }
+    .nav-group { display:flex; gap:10px; align-items:center; }
+    .nav-btn { background:#ffffff22; color:#fff; border:2px solid #fff; padding:10px 16px; border-radius:30px; font-weight:600; cursor:pointer; text-decoration:none; transition:all .25s ease; display:inline-block }
+    .nav-btn:hover { background:#ffffff33; transform: translateY(-1px); }
+
+    .upload-section { padding:40px; text-align:center; border-bottom:2px solid #f0f0f0; }
+    .upload-area { border:3px dashed #667eea; border-radius:15px; padding:40px; background:#f8f9ff; cursor:pointer; transition:all .3s ease; }
+    .upload-area:hover { border-color:#764ba2; background:#f0f2ff; transform: translateY(-2px); }
+    .upload-area.dragover { border-color:#764ba2; background:#e8ebff; }
+    .upload-icon { font-size:3em; margin-bottom:15px; }
+    .upload-text { font-size:1.2em; color:#667eea; font-weight:600; }
+    .upload-subtext { color:#666; margin-top:10px; }
+    input[type=file] { display:none; }
+
+    .file-link { color:#333; text-decoration:none; border-bottom:1px dashed #667eea; }
+    .file-link:hover { color:#667eea; background:#f0f2ff; }
+
+    .results { padding:40px; display:none; }
+    .results.show { display:block; }
+
+    .stat-card { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:#fff; padding:30px; border-radius:15px; margin-bottom:30px; box-shadow:0 10px 30px rgba(102,126,234,.3); }
+    .stat-value { font-size:3em; font-weight:bold; margin:10px 0; }
+    .stat-label { font-size:1.2em; opacity:.9; }
+
+    .section { margin-bottom:40px; }
+    .section h2 { color:#667eea; margin-bottom:20px; padding-bottom:10px; border-bottom:3px solid #667eea; font-size:1.5em; }
+
+    table { width:100%; border-collapse:collapse; background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 5px 15px rgba(0,0,0,.1); }
+    thead { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:#fff; }
+    th { padding:15px; text-align:left; font-weight:600; }
+    td { padding:12px 15px; border-bottom:1px solid #f0f0f0; }
+    tbody tr:hover { background:#f8f9ff; }
+    tbody tr:last-child td { border-bottom:none; }
+    .file-path { color:#333; font-family:'Courier New', monospace; font-size:.9em; }
+    .size-value { color:#667eea; font-weight:600; }
+    .version-count { background:#667eea; color:#fff; padding:5px 12px; border-radius:20px; display:inline-block; font-weight:600; }
+
+    .loading { text-align:center; padding:40px; display:none; }
+    .loading.show { display:block; }
+    .spinner { border:4px solid #f3f3f3; border-top:4px solid #667eea; border-radius:50%; width:50px; height:50px; animation:spin 1s linear infinite; margin:0 auto 20px; }
+    @keyframes spin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
+
+    .error { background:#ff4444; color:#fff; padding:20px; border-radius:10px; margin:20px; display:none; }
+    .error.show { display:block; }
+    .rank { background:#764ba2; color:#fff; width:30px; height:30px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:bold; margin-right:10px; }
+
+    .export-btn { position:fixed; bottom:30px; right:30px; background:linear-gradient(135deg,#003d7a 0%,#00b4d8 100%); color:#fff; border:none; padding:18px 35px; border-radius:50px; font-size:1.1em; font-weight:600; cursor:pointer; box-shadow:0 10px 30px rgba(0,61,122,.4); transition:all .3s ease; z-index:1000; display:none; }
+    .export-btn.show { display:block; }
+    .export-btn:hover { transform:translateY(-3px); box-shadow:0 15px 40px rgba(0,61,122,.5); }
+    .export-icon { margin-right:8px; }
+
+    /* Single-file tutorial integration */
+    body.tutorial-mode .upload-section,
+    body.tutorial-mode .loading,
+    body.tutorial-mode .error,
+    body.tutorial-mode .results,
+    body.tutorial-mode .export-btn { display:none !important; }
+    .tutorial { display:none; padding:40px; }
+    body.tutorial-mode .tutorial { display:block; }
+    .tuto-hero { background:#f8f9ff; border-left:4px solid #667eea; padding:14px 16px; border-radius:10px; margin-bottom:18px }
+    .tutorial h2 { color:#667eea; margin:26px 0 12px 0; padding-bottom:8px; border-bottom:3px solid #667eea; font-size:1.4em }
+    .tutorial .callout { background:#f8f9ff; border-left:4px solid #667eea; padding:12px 16px; border-radius:8px; margin:14px 0 }
+    .tutorial code, .tutorial pre { font-family:Consolas, Menlo, Monaco, 'Courier New', monospace }
+    .tutorial pre { background:#0b1020; color:#d7e8ff; padding:14px; border-radius:10px; overflow:auto }
+    .kbd { display:inline-block; background:#eef2ff; border:1px solid #c7cffd; border-bottom-width:3px; border-radius:6px; padding:0 6px; font-weight:600 }
+    .small { color:#667085 }
+	.btn-link {
+	  display: inline-block;
+	  padding: 4px 10px;
+	  background: linear-gradient(135deg, #003d7a 0%, #00b4d8 100%);
+	  color: white;
+	  font-weight: 600;
+	  border-radius: 14px;
+	  text-decoration: none;
+	  transition: all 0.25s ease;
+	}
+
+	.btn-link:hover {
+	  transform: translateY(-2px);
+	  box-shadow: 0 8px 20px rgba(0, 61, 122, 0.35);
+	}
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="topbar">
+        <div>
+          <h1>📊 Analyseur d'Historique de Versions SharePoint</h1>
+          <p>Analysez vos fichiers CSV d'export de versions SharePoint</p>
+        </div>
+        <div class="nav-group">
+          <a class="nav-btn" href="#" onclick="openAnalyzer();return false;">📊 Analyse</a>
+          <a class="nav-btn" href="#" onclick="openTutorial();return false;">📘 Tutoriel</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="upload-section">
+      <div class="upload-area" id="uploadArea">
+        <div class="upload-icon">📁</div>
+        <div class="upload-text">Cliquez ou glissez-déposez votre fichier CSV</div>
+        <div class="upload-subtext">Format: VersionReport CSV de SharePoint</div>
+      </div>
+      <input type="file" id="fileInput" accept=".csv,.txt">
+    </div>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p>Analyse en cours...</p>
+    </div>
+
+    <div class="error" id="error"></div>
+
+    <div class="results" id="results">
+      <div class="stat-card">
+        <div class="stat-label">Taille Totale des Historiques de Version</div>
+        <div class="stat-value" id="totalSize">0 GB</div>
+      </div>
+
+      <div class="section">
+        <h2>🏆 Top 20 - Fichiers avec le Plus d'Espace Utilisé</h2>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:50px;">Rang</th>
+              <th>Fichier</th>
+              <th style="width:150px;">Taille Totale</th>
+              <th style="width:150px;">Plus Grande Version</th>
+              <th style="width:100px;">Versions</th>
+            </tr>
+          </thead>
+          <tbody id="topSizeTable"></tbody>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>⚠️ Top 20 - Pire Ratio Versions/Taille (Plus Problématiques)</h2>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:50px;">Rang</th>
+              <th>Fichier</th>
+              <th style="width:120px;">Ratio (x fois)</th>
+              <th style="width:150px;">Taille Totale</th>
+              <th style="width:150px;">Plus Grande Version</th>
+              <th style="width:100px;">Versions</th>
+            </tr>
+          </thead>
+          <tbody id="topRatioTable"></tbody>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>📝 Top 20 - Fichiers avec le Plus de Versions</h2>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:50px;">Rang</th>
+              <th>Fichier</th>
+              <th style="width:150px;">Nombre de Versions</th>
+              <th style="width:150px;">Taille Totale</th>
+            </tr>
+          </thead>
+          <tbody id="topVersionsTable"></tbody>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>⏰ Top 20 - Fichiers les Plus Anciens</h2>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:50px;">Rang</th>
+              <th>Fichier</th>
+              <th style="width:180px;">Première Version</th>
+              <th style="width:100px;">Âge (jours)</th>
+              <th style="width:100px;">Versions</th>
+              <th style="width:150px;">Taille Totale</th>
+            </tr>
+          </thead>
+          <tbody id="topAgeTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <button class="export-btn" id="exportBtn"><span class="export-icon">📄</span>Exporter en PDF</button>
+
+    <div class="tutorial" id="tutorial">
+      <div class="tuto-hero">
+        <strong>📘 Tutoriel :</strong> Historiques de version SharePoint & génération du rapport CSV
+        <div class="small">Guide pas-à-pas pour comprendre les versions, créer le rapport, puis l'analyser avec cette page.</div>
+      </div>
+
+      <h2>1) Comprendre l'historique des versions SharePoint</h2>
+      <p>SharePoint conserve des <strong>versions</strong> de vos documents pour permettre le suivi, la restauration et l'audit. Chaque nouvelle sauvegarde peut créer une version, ce qui consomme de l'espace. Paramètres clés :</p>
+      <ul>
+        <li><strong>Nombre de versions majeures / mineures</strong> (paramètres avancés de la bibliothèque).</li>
+        <li><strong>Conservation</strong> (durées/stratégies, labels de rétention si utilisés).</li>
+        <li><strong>Taille des versions</strong> : fichiers volumineux et modifications fréquentes peuvent faire exploser le stockage.</li>
+      </ul>
+      <div class="callout"><span class="small">Astuce : Activer le mode automatique (si besoin, limitez le nombre de versions et nettoyez celles très anciennes si compatible avec vos exigences de conformité.)</span></div>
+
+      <h2>2) Pré-requis pour exécuter les commandes PowerShell </h2> 
+      <ul>
+        <li>Compte avec droits <strong>SharePoint Admin</strong> ou suffisants sur le site ciblé.</li>
+        <li>Module <span class="kbd">Microsoft.Online.SharePoint.PowerShell</span> installé :<br><pre>Install-Module Microsoft.Online.SharePoint.PowerShell</pre></li>
+        <li>Connexion préalable :<br><pre>Connect-SPOService -Url https://&lt;tenant&gt;-admin.sharepoint.com</pre></li>
+		<div class="callout">
+			<span class="small">
+			<a href="https://learn.microsoft.com/fr-fr/powershell/sharepoint/sharepoint-online/connect-sharepoint-online" target="_blank" rel="noopener noreferrer" class="btn-link">
+			  📘 Documentation Microsoft
+			</a>
+			</span>
+		</div>
+      </ul>
+
+      <h2>3) Lancer le job de génération du rapport CSV</h2>
+	  <li>URL du site cible (<code>-Identity</code>) et URL de sortie du CSV (<code>-ReportUrl</code>) pointant vers une bibliothèque existante.</li>
+      <p>Créer le job d'export du <em>Version Expiration Report</em> :</p>
+      <pre>New-SPOSiteFileVersionExpirationReportJob -Identity "https://xxx.sharepoint.com/sites/xxx" \
+-ReportUrl "https://xxx.sharepoint.com/sites/xxx/Documents%20partages/VersionReport.csv"</pre>
+		<div class="callout">
+			<span class="small">
+			<a href="https://learn.microsoft.com/fr-fr/powershell/module/microsoft.online.sharepoint.powershell/new-spositefileversionexpirationreportjob?view=sharepoint-ps" target="_blank" rel="noopener noreferrer" class="btn-link">
+			  📘 Documentation Microsoft
+			</a>
+			</span>
+		</div>
+      <h2>4) Suivre la progression du job</h2>
+      <pre>Get-SPOSiteFileVersionExpirationReportJobProgress -Identity "https://xxx.sharepoint.com/sites/xxx" \
+-ReportUrl "https://xxx.sharepoint.com/sites/xxx/Documents%20partages/VersionReport.csv"</pre>
+      <ul>
+        <li>Le cmdlet retourne l'état (en cours/terminé) et des détails de progression si disponibles.</li>
+        <li>Une fois <strong>terminé</strong>, téléchargez <code>VersionReport.csv</code>.</li>
+      </ul>
+
+      <h2>5) Analyser le CSV avec cette page</h2>
+      <p>Revenez sur l'onglet <span class="kbd">Analyse</span> puis <strong>glissez-déposez</strong> le <code>VersionReport.csv</code> : la page calcule la taille totale, le nombre de versions, le ratio taille/plus grande version et le top par ancienneté.</p>
+
+      <h2>6) Champs CSV attendus</h2>
+      <p>Le parseur accepte des colonnes comme : <code>DocId.Compact</code>, <code>DocId</code>, <code>FileUrl.Compact</code>, <code>FileUrl</code>, <code>Size</code>, <code>LastModifiedDate</code>/<code>ModifiedDate</code>. Les colonnes manquantes sont gérées quand c'est possible, mais veillez à l'intégrité du fichier.</p>
+
+      <h2>7) Dépannage rapide</h2>
+      <ul>
+        <li><strong>CSV vide</strong> : vérifiez vos droits et l'existence de la bibliothèque indiquée dans <code>-ReportUrl</code>.</li>
+        <li><strong>Erreur de connexion</strong> : assurez-vous d'être connecté avec <code>Connect-SPOService</code> sur l'URL d'admin.</li>
+        <li><strong>Entêtes inattendus</strong> : ouvrez le CSV et vérifiez les colonnes.</li>
+      </ul>
+
+      <p class="small">Remplacez les URLs d'exemple (<code>https://xxx...</code>) par celles de votre tenant/site.</p>
+    </div>
+  </div>
+
+  <script>
+    // Toggle tutoriel/analyse
+    function openTutorial(){ document.body.classList.add('tutorial-mode'); window.scrollTo({top:0, behavior:'smooth'}); }
+    function openAnalyzer(){ document.body.classList.remove('tutorial-mode'); window.scrollTo({top:0, behavior:'smooth'}); }
+
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const loading = document.getElementById('loading');
+    const results = document.getElementById('results');
+    const error = document.getElementById('error');
+    const exportBtn = document.getElementById('exportBtn');
+    let currentData = null;
+
+    // Construit un lien vers le DOSSIER contenant le fichier (retire le nom de fichier du chemin)
+    // Utilise l'URL du site trouvée dans le CSV (colonne WebUrl.Compact / WebUrl)
+    function buildFolderLink(fileUrl, webUrl){
+      const base = (webUrl || '').trim().replace(/\/+$/,'');
+      if(!base || !fileUrl) return null;
+      const parts = fileUrl.split('/').filter(p=>p!=='');
+      if(parts.length===0) return null;
+      parts.pop(); // retire le nom de fichier
+      const encodedPath = parts.map(p=> encodeURIComponent(p)).join('/');
+      return encodedPath ? `${base}/${encodedPath}` : base;
+    }
+
+    // Retourne le HTML (lien cliquable si une URL de base est disponible, sinon texte brut)
+    function renderFilePath(fileUrl, webUrl){
+      const link = buildFolderLink(fileUrl, webUrl);
+      const escaped = fileUrl.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      if(link){
+        return `<a class="file-link" href="${link}" target="_blank" rel="noopener noreferrer" title="Ouvrir le dossier dans SharePoint">${escaped}</a>`;
+      }
+      return escaped;
+    }
+
+    uploadArea.addEventListener('click', () => fileInput.click());
+    uploadArea.addEventListener('dragover', (e)=>{ e.preventDefault(); uploadArea.classList.add('dragover'); });
+    uploadArea.addEventListener('dragleave', ()=> uploadArea.classList.remove('dragover'));
+    uploadArea.addEventListener('drop', (e)=>{ e.preventDefault(); uploadArea.classList.remove('dragover'); const file=e.dataTransfer.files[0]; if(file) processFile(file); });
+    fileInput.addEventListener('change', (e)=>{ const file=e.target.files[0]; if(file) processFile(file); });
+
+    function processFile(file){
+      loading.classList.add('show');
+      results.classList.remove('show');
+      error.classList.remove('show');
+      Papa.parse(file, {
+        header:true, dynamicTyping:false, skipEmptyLines:true, delimiter:',',
+        complete: (parseResult)=>{
+          try {
+            if(!parseResult.data || parseResult.data.length===0){ showError('Le fichier CSV est vide ou mal formaté'); return; }
+            currentData = analyzeData(parseResult.data);
+            loading.classList.remove('show');
+            results.classList.add('show');
+            exportBtn.classList.add('show');
+          } catch(e){ showError('Erreur lors de l\'analyse: '+e.message); }
+        },
+        error: (err)=> showError('Erreur lors de la lecture du fichier: '+err.message)
+      });
+    }
+
+    function showError(message){ loading.classList.remove('show'); error.textContent = message; error.classList.add('show'); }
+
+    function analyzeData(data){
+      const fileStats = {};
+      let currentFileUrl = null; let currentDocId = null; let currentWebUrl = null;
+      data.forEach((row, index)=>{
+        try{
+          if(!row || typeof row !== 'object') return;
+          const docId = row['DocId.Compact'] || row.DocId;
+          const fileUrl = row['FileUrl.Compact'] || row.FileUrl;
+          const webUrl = row['WebUrl.Compact'] || row.WebUrl;
+          const sizeStr = row.Size || '0';
+          const size = parseInt(sizeStr.toString().replace(/[^0-9]/g,'')) || 0;
+          const modifiedDate = row.LastModifiedDate || row.ModifiedDate;
+
+          // WebUrl.Compact n'apparaît généralement qu'une seule fois en haut du CSV (valable pour tout le fichier),
+          // donc on la mémorise dès qu'on la rencontre, indépendamment du démarrage d'un nouveau bloc fichier.
+          if(webUrl && webUrl.trim()!=='') currentWebUrl = webUrl;
+          if(fileUrl && fileUrl.trim()!==''){ currentFileUrl = fileUrl; currentDocId = docId; }
+          const effectiveFileUrl = currentFileUrl; const effectiveDocId = currentDocId; const effectiveWebUrl = currentWebUrl;
+          if(!effectiveFileUrl || !effectiveDocId) return;
+
+          if(!fileStats[effectiveDocId]){
+            fileStats[effectiveDocId] = { fileUrl: effectiveFileUrl, webUrl: effectiveWebUrl, totalSize:0, versionCount:0, maxVersionSize:0, firstDate:null, lastDate:null };
+          }
+          fileStats[effectiveDocId].totalSize += size;
+          fileStats[effectiveDocId].versionCount++;
+          if(size > fileStats[effectiveDocId].maxVersionSize) fileStats[effectiveDocId].maxVersionSize = size;
+
+          if(modifiedDate && modifiedDate.trim()!==''){
+            const date = new Date(modifiedDate);
+            if(!isNaN(date.getTime())){
+              if(!fileStats[effectiveDocId].firstDate || date < fileStats[effectiveDocId].firstDate) fileStats[effectiveDocId].firstDate = date;
+              if(!fileStats[effectiveDocId].lastDate  || date > fileStats[effectiveDocId].lastDate)  fileStats[effectiveDocId].lastDate  = date;
+            }
+          }
+        }catch(e){ console.error(`Erreur ligne ${index}:`, e); }
+      });
+
+      const filesArray = Object.values(fileStats);
+      if(filesArray.length===0){ showError('Aucune donnée valide trouvée dans le fichier CSV'); return; }
+
+      const totalSize = filesArray.reduce((s,f)=> s+f.totalSize, 0);
+      document.getElementById('totalSize').textContent = formatBytes(totalSize);
+
+      const topBySize = [...filesArray].sort((a,b)=> b.totalSize - a.totalSize).slice(0,20);
+      renderTopSize(topBySize);
+
+      const topByRatio = [...filesArray]
+        .filter(f=> f.maxVersionSize>0)
+        .map(f=> ({...f, ratio: f.totalSize / f.maxVersionSize}))
+        .sort((a,b)=> b.ratio - a.ratio)
+        .slice(0,20);
+      renderTopRatio(topByRatio);
+
+      const topByVersions = [...filesArray].sort((a,b)=> b.versionCount - a.versionCount).slice(0,20);
+      renderTopVersions(topByVersions);
+
+      const topByAge = [...filesArray].filter(f=> f.firstDate).sort((a,b)=> a.firstDate - b.firstDate).slice(0,20);
+      renderTopAge(topByAge);
+
+      // Stats globales complémentaires pour le rapport
+      const totalFiles = filesArray.length;
+      const totalVersions = filesArray.reduce((s,f)=> s+f.versionCount, 0);
+      const latestVersionsSize = filesArray.reduce((s,f)=> s+f.maxVersionSize, 0);
+      const recoverableSize = Math.max(0, totalSize - latestVersionsSize); // espace occupé par les anciennes versions
+      const avgVersionsPerFile = totalVersions / totalFiles;
+      const oldest = topByAge[0] || null;
+      // URL du site SharePoint (issue de la colonne WebUrl.Compact/WebUrl, valable pour tout le rapport)
+      const siteUrl = filesArray.find(f=> f.webUrl && f.webUrl.trim()!=='')?.webUrl || null;
+
+      return { totalSize, topBySize, topByRatio, topByVersions, topByAge,
+        totalFiles, totalVersions, latestVersionsSize, recoverableSize, avgVersionsPerFile, oldest, siteUrl };
+    }
+
+    function renderTopSize(files){
+      const tbody = document.getElementById('topSizeTable');
+      tbody.innerHTML = files.map((file, index)=>`
+        <tr>
+          <td><span class="rank">${index+1}</span></td>
+          <td><div class="file-path">${renderFilePath(file.fileUrl, file.webUrl)}</div></td>
+          <td><span class="size-value">${formatBytes(file.totalSize)}</span></td>
+          <td><span class="size-value">${formatBytes(file.maxVersionSize)}</span></td>
+          <td><span class="version-count">${file.versionCount}</span></td>
+        </tr>`).join('');
+    }
+
+    function renderTopRatio(files){
+      const tbody = document.getElementById('topRatioTable');
+      tbody.innerHTML = files.map((file, index)=>{
+        const ratioColor = file.ratio > 20 ? '#dc3545' : (file.ratio > 10 ? '#ff6b6b' : '#667eea');
+        return `
+        <tr>
+          <td><span class="rank">${index+1}</span></td>
+          <td><div class="file-path">${renderFilePath(file.fileUrl, file.webUrl)}</div></td>
+          <td><span class="version-count" style="background:${ratioColor};">${file.ratio.toFixed(1)}x</span></td>
+          <td><span class="size-value">${formatBytes(file.totalSize)}</span></td>
+          <td><span class="size-value">${formatBytes(file.maxVersionSize)}</span></td>
+          <td><span class="version-count">${file.versionCount}</span></td>
+        </tr>`;
+      }).join('');
+    }
+
+    function renderTopVersions(files){
+      const tbody = document.getElementById('topVersionsTable');
+      tbody.innerHTML = files.map((file, index)=>`
+        <tr>
+          <td><span class="rank">${index+1}</span></td>
+          <td><div class="file-path">${renderFilePath(file.fileUrl, file.webUrl)}</div></td>
+          <td><span class="version-count">${file.versionCount}</span></td>
+          <td><span class="size-value">${formatBytes(file.totalSize)}</span></td>
+        </tr>`).join('');
+    }
+
+    function renderTopAge(files){
+      const tbody = document.getElementById('topAgeTable');
+      const now = new Date();
+      tbody.innerHTML = files.map((file, index)=>{
+        const ageInDays = Math.floor((now - file.firstDate)/(1000*60*60*24));
+        return `
+        <tr>
+          <td><span class="rank">${index+1}</span></td>
+          <td><div class="file-path">${renderFilePath(file.fileUrl, file.webUrl)}</div></td>
+          <td>${formatDate(file.firstDate)}</td>
+          <td><span class="version-count">${ageInDays}</span></td>
+          <td><span class="version-count">${file.versionCount}</span></td>
+          <td><span class="size-value">${formatBytes(file.totalSize)}</span></td>
+        </tr>`;
+      }).join('');
+    }
+
+    function formatBytes(bytes){ if(bytes===0) return '0 B'; const k=1024; const sizes=['B','KB','MB','GB','TB']; const i=Math.floor(Math.log(bytes)/Math.log(k)); return parseFloat((bytes/Math.pow(k,i)).toFixed(2))+' '+sizes[i]; }
+    function formatDate(date){ return date.toLocaleDateString('fr-FR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+
+    // === Export PDF 1 PAGE, avec logo (base64 à fournir) ===
+    
+    // === Export PDF 1 PAGE, Dynamips branding ===
+    exportBtn.addEventListener('click', async ()=>{
+      if(!currentData) return;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('l','mm','a4'); // paysage
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 10; let y = margin;
+      const dynBlue=[0,61,122], dynCyan=[0,180,216], dynOrange=[255,152,0], dynGray=[40,40,40];
+
+      // --- Bandeau d'en-tête avec logo ---
+      doc.setFillColor(...dynBlue);
+      doc.roundedRect(0, 0, pageWidth, 22, 0, 0, 'F');
+      const DYNAMIPS_LOGO_BASE64 = 'data:image/png;base64,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';
+      if(DYNAMIPS_LOGO_BASE64) {
+        try { doc.addImage(DYNAMIPS_LOGO_BASE64,'PNG', margin, 3, 26, 15); } catch(e) { console.warn('Logo non inséré', e); }
+      }
+      doc.setTextColor(255,255,255);
+      doc.setFontSize(14); doc.setFont(undefined,'bold');
+      doc.text("Rapport d'Analyse SharePoint – Versions", margin+30+4, 7.5);
+      doc.setFontSize(7.5); doc.setFont(undefined,'normal');
+      doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`, margin+30+4, 13);
+      if(currentData.siteUrl){
+        doc.setTextColor(220,240,255);
+        doc.textWithLink(`🔗 Site : ${currentData.siteUrl}`, margin+30+4, 18, { url: currentData.siteUrl });
+      }
+
+      y = 26;
+
+      // --- Cartes statistiques ---
+      const cardGap = 6;
+      const cardW = (pageWidth - margin*2 - cardGap*2) / 3;
+      const cardH = 16;
+      const statCards = [
+        { label: 'Taille totale des historiques', value: formatBytes(currentData.totalSize), color: dynCyan },
+        { label: 'Fichiers analysés', value: String(currentData.totalFiles), color: dynBlue },
+        { label: 'Versions au total (moy. ' + currentData.avgVersionsPerFile.toFixed(1) + '/fichier)', value: String(currentData.totalVersions), color: dynBlue },
+      ];
+      statCards.forEach((card, i)=>{
+        const cx = margin + i*(cardW+cardGap);
+        doc.setDrawColor(225,225,225);
+        doc.setFillColor(250,250,252);
+        doc.roundedRect(cx, y, cardW, cardH, 2.5, 2.5, 'FD');
+        doc.setFillColor(...card.color);
+        doc.roundedRect(cx, y, 2.2, cardH, 1, 1, 'F');
+        doc.setTextColor(90,90,90); doc.setFont(undefined,'normal'); doc.setFontSize(7);
+        const labelLines = doc.splitTextToSize(card.label, cardW-8);
+        doc.text(labelLines, cx+6, y+6);
+        doc.setTextColor(dynGray[0],dynGray[1],dynGray[2]); doc.setFont(undefined,'bold'); doc.setFontSize(13);
+        doc.text(card.value, cx+6, y+13);
+      });
+
+      y += cardH + 6;
+
+      // Styles tableau
+      const headStyle={ fillColor: dynBlue, textColor:[255,255,255], fontStyle:'bold', fontSize:8, halign:'center' };
+      const bodyStyle={ fontSize:7, textColor:[30,30,30] };
+      const altStyle={ fillColor:[245,248,255] };
+      const gridStyle={ lineWidth:0.1, lineColor:[220,220,220], cellPadding: 1.2 };
+
+      // Titre de section
+      doc.setTextColor(...dynBlue); doc.setFont(undefined,'bold'); doc.setFontSize(11);
+      doc.text("Top 20 - Fichiers avec le Plus d'Espace Utilisé", margin, y);
+      y += 2;
+
+      // Liens vers les dossiers, associés à chaque ligne du tableau
+      const top20 = currentData.topBySize.slice(0,20);
+      const rowLinks = top20.map(f=> buildFolderLink(f.fileUrl, f.webUrl));
+
+      doc.autoTable({
+        startY: y+2, margin:{left:margin, right:margin},
+        head:[["#","Fichier","Taille Totale","Plus Grande Version","Versions"]],
+        body: top20.map((f,i)=> [ i+1, f.fileUrl, formatBytes(f.totalSize), formatBytes(f.maxVersionSize), f.versionCount ]),
+        theme:'grid', headStyles: headStyle, bodyStyles: bodyStyle, alternateRowStyles: altStyle, styles: gridStyle,
+        columnStyles: { 0:{cellWidth:10}, 1:{cellWidth: pageWidth-margin*2-(10+32+34+22), overflow:'linebreak'}, 2:{cellWidth:32,halign:'right'}, 3:{cellWidth:34,halign:'right'}, 4:{cellWidth:22,halign:'center'} },
+        didParseCell: (data)=>{
+          // Colore + souligne visuellement les cellules "Fichier" qui ont un lien cliquable
+          if(data.section==='body' && data.column.index===1 && rowLinks[data.row.index]){
+            data.cell.styles.textColor = dynCyan;
+          }
+        },
+        didDrawCell: (data)=>{
+          // Ajoute le lien cliquable par-dessus la cellule "Fichier"
+          if(data.section==='body' && data.column.index===1){
+            const link = rowLinks[data.row.index];
+            if(link){ doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: link }); }
+          }
+        }
+      });
+
+      y = doc.lastAutoTable.finalY + 6;
+      doc.setFontSize(7.5); doc.setTextColor(140,140,140); doc.setFont(undefined,'italic');
+      doc.text('💡 Cliquez sur un nom de fichier pour ouvrir son dossier dans SharePoint.', margin, y);
+
+      // Footer
+      doc.setFontSize(8); doc.setTextColor(120,120,120); doc.setFont(undefined,'normal');
+      doc.text('Dynamips — Rapport versions SharePoint', margin, pageHeight-5);
+      doc.text('Page 1 / 1', pageWidth - margin, pageHeight-5, { align:'right' });
+
+      doc.save(`Rapport_SharePoint_Dynamips_${new Date().toISOString().split('T')[0]}.pdf`);
+    });
+;
+  </script>
+</body>
+</html>
